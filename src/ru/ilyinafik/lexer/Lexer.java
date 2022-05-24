@@ -1,59 +1,46 @@
 package ru.ilyinafik.lexer;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Lexer {
+    String codeStrings;
+    int position =0;
+    ArrayList<Token> tokenArray =new ArrayList<>();
 
-    private static class Token {
-
-        private final String type;
-        private final String value;
-
-        private Token(String type, String value) {
-            this.type = type;
-            this.value = value;
-        }
-
-        @Override
-        public String toString() {
-            return type + ": " + value;
-        }
+    public Lexer(String codeStrings) {
+        this.codeStrings = codeStrings;
     }
-
-    private static final Map<String, String> LEXEMES = Map.of(
-            "VAR", "^[a-z]+$",
-            "DIGIT", "^0|[1-9][0-9]*$",
-            "OPERATOR", "^[-|+|/|*]$",
-            "ASSIGNMENT OPERATOR", "^=$"
-    );
-
-    private static List<Token> parseExpression(String value) {
-        String[] parts = value.trim().split("\\s+");
-        List<Token> result = new ArrayList<>(parts.length);
-        for (String part : parts) {
-            result.add(parseToken(part));
-        }
-        return result;
+    public ArrayList<Token> start(){
+        //главная функция лексера, в ней запускаем функцию, которая ищет токены и потом выдаём массив токенов
+        while(checkTokens()){}
+        return this.tokenArray;
     }
-
-    private static Token parseToken(String value) {
-        for (String key : LEXEMES.keySet()) {
-            if (value.matches(LEXEMES.get(key))) {
-                return new Token(key, value);
+    public boolean checkTokens(){
+        //функция, которая ищет токены. В ней мы проходим по нашему списку токенов и,
+        //если нашлось совпадение регулярного выржения,
+        // и при этом это совпадение начинается с позиции, на которой мы остановились, то мы создаём такой токен, добавляем его в массив
+        //и передвигаем позицию, иначе выдаём ошибку.
+        //После того, как прошли по всей строке(коду, который в файле Code) массив токенов передаём парсеру
+        TokenType[] tokenTypes=TokenType.tokenTypeList;
+        if(this.position >= codeStrings.length())
+            return false;
+        for (int i=0;i<tokenTypes.length;i++){
+            TokenType tokenType=tokenTypes[i];
+            String regex=tokenType.reg;
+            Matcher matcher=Pattern.compile(regex).matcher(codeStrings);
+            if(matcher.find(this.position)&&matcher.start()==this.position)
+            {
+                String result=this.codeStrings.substring(this.position,this.position +matcher.group().length());
+                Token token = new Token(tokenType, result, this.position);
+                this.position += result.length();
+                if(token.type!=TokenType.tokenTypeList[3]&&token.type!=TokenType.tokenTypeList[2]&&token.type!=TokenType.tokenTypeList[1])
+                    tokenArray.add(token);
+                return true;
             }
         }
-        throw new IllegalArgumentException("Illegal value: " + value);
-    }
-
-    public static void main(String[] args) {
-        String input = new Scanner(System.in).nextLine();
-        List<Token> tokens = parseExpression(input);
-        for (Token token : tokens) {
-            System.out.println(token);
-        }
+        throw new Error("Ошибка на позиции: "+this.position);
     }
 
 }
